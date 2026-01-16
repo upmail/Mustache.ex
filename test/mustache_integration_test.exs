@@ -44,4 +44,25 @@ defmodule MustacheTest do
     actual = Mustache.render(template, data)
     assert String.strip(actual) == String.strip(expected)
   end
+
+  test "Renders human readable placeholders for missing keys" do
+    # Basics
+    assert Mustache.render("Hello {{name}}", %{}) == "Hello [[Name]]"
+
+    assert Mustache.render("Hello {{contact.first_name}}", %{}) ==
+             "Hello [[Contact > First name]]"
+
+    assert Mustache.render("Hello {{contact.first_name}}", %{contact: %{first_name: "John"}}) ==
+             "Hello John"
+
+    # Complex examples
+    assert Mustache.render("Hello {{contact.first_name}}", %{contact: %{}}) ==
+             "Hello [[Contact > First name]]"
+
+    assert Mustache.render("Hello {{contact.first_name}}", %{contact: %{first_name: ""}}) ==
+             "Hello [[Contact > First name]]"
+
+    assert Mustache.render("Hello {{contact.first_name}}", %{contact: %{first_name: nil}}) ==
+             "Hello [[Contact > First name]]"
+  end
 end
