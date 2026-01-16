@@ -19,18 +19,25 @@ defmodule Mustache do
       _  ->
         first_scan = List.first(scans)
         variable = first_scan |> clean(["{{", "}}"])
-        value = if escape?(first_scan) do
-          key = variable |> String.trim
-          data |> indifferent_access(key) |> to_string |> escape
-        else
-          key = String.replace(variable, "&", "") |> String.trim
-          data |> indifferent_access(key) |> to_string
-        end
-        case value do
-          nil -> template
-          "" -> double_mustaches(String.replace(template, "{{#{variable}}}", "**#{variable}**"), data)
-          _ -> double_mustaches(String.replace(template, "{{#{variable}}}", value), data)
-        end
+
+        key =
+          if escape?(first_scan) do
+            variable |> String.trim()
+          else
+            String.replace(variable, "&", "") |> String.trim()
+          end
+
+        raw_value = data |> indifferent_access(key)
+
+        replacement =
+          if blank?(raw_value) do
+            format_missing_key(key)
+          else
+            value = to_string(raw_value)
+            if escape?(first_scan), do: escape(value), else: value
+          end
+
+        double_mustaches(String.replace(template, "{{#{variable}}}", replacement), data)
     end
   end
 
@@ -113,9 +120,11 @@ defmodule Mustache do
 
   defp interpolate(template, data, path) do
     value = resolve(data, String.split(path, "."))
-    String.replace(template, "{{#{path}}}", to_string(value))
+    replacement = if blank?(value), do: format_missing_key(path), else: to_string(value)
+    String.replace(template, "{{#{path}}}", replacement)
   end
 
+  def resolve(nil, _keys), do: nil
   def resolve(data, [key | []]), do: indifferent_access(data, key)
   def resolve(data, [key | rest]) do
     data
@@ -154,6 +163,26 @@ defmodule Mustache do
     Enum.reduce(patterns, non_cleaned, fn(pattern, str) ->
       String.replace(str, pattern, "")
     end)
+  end
+
+  defp blank?(nil), do: true
+  defp blank?(""), do: true
+  defp blank?(_), do: false
+
+  defp humanize_key(key) do
+    key
+    |> String.replace("_", " ")
+    |> String.capitalize()
+  end
+
+  defp format_missing_key(path) do
+    humanized =
+      path
+      |> String.split(".")
+      |> Enum.map(&humanize_key/1)
+      |> Enum.join(" > ")
+
+    "[[#{humanized}]]"
   end
 
   defp strategies do
