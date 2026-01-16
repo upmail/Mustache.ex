@@ -169,20 +169,8 @@ defmodule Mustache do
   defp blank?(""), do: true
   defp blank?(_), do: false
 
-  defp humanize_key(key) do
-    key
-    |> String.replace("_", " ")
-    |> String.capitalize()
-  end
-
   defp format_missing_key(path) do
-    humanized =
-      path
-      |> String.split(".")
-      |> Enum.map(&humanize_key/1)
-      |> Enum.join(" > ")
-
-    "[[#{humanized}]]"
+    "[[#{path}]]"
   end
 
   defp strategies do
